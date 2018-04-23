@@ -95,10 +95,17 @@ else
 bench-malloc := $(filter malloc-%,${BENCHSET})
 endif
 
+ifeq (${BENCHSET},)
+bench-mutex := mutex-adaptive-thread
+else
+bench-mutex := $(filter mutex-%,${BENCHSET})
+endif
+
 $(addprefix $(objpfx)bench-,$(bench-math)): $(libm)
 $(addprefix $(objpfx)bench-,$(math-benchset)): $(libm)
 $(addprefix $(objpfx)bench-,$(bench-pthread)): $(shared-thread-library)
 $(objpfx)bench-malloc-thread: $(shared-thread-library)
+$(addprefix $(objpfx)bench-,$(bench-mutex)): $(shared-thread-library)
 
 
 
@@ -119,6 +126,7 @@ include ../Rules
 binaries-bench := $(addprefix $(objpfx)bench-,$(bench))
 binaries-benchset := $(addprefix $(objpfx)bench-,$(benchset))
 binaries-bench-malloc := $(addprefix $(objpfx)bench-,$(bench-malloc))
+binaries-bench-mutex := $(addprefix $(objpfx)bench-,$(bench-mutex))
 
 # The default duration: 10 seconds.
 ifndef BENCH_DURATION
@@ -142,7 +150,7 @@ endif
 # This makes sure CPPFLAGS-nonlib and CFLAGS-nonlib are passed
 # for all these modules.
 cpp-srcs-left := $(binaries-benchset:=.c) $(binaries-bench:=.c) \
-		 $(binaries-bench-malloc:=.c)
+	$(binaries-bench-malloc:=.c) $(binaries-bench-mutex:=.c)
 lib := nonlib
 include $(patsubst %,$(..)libof-iterator.mk,$(cpp-srcs-left))
 
@@ -158,6 +166,7 @@ bench-clean:
 	rm -f $(binaries-bench) $(addsuffix .o,$(binaries-bench))
 	rm -f $(binaries-benchset) $(addsuffix .o,$(binaries-benchset))
 	rm -f $(binaries-bench-malloc) $(addsuffix .o,$(binaries-bench-malloc))
+	rm -f $(binaries-bench-mutex) $(addsuffix .o,$(binaries-bench-mutex))
 	rm -f $(timing-type) $(addsuffix .o,$(timing-type))
 	rm -f $(addprefix $(objpfx),$(bench-extra-objs))
 
@@ -165,7 +174,7 @@ bench-clean:
 ifneq ($(strip ${BENCHSET}),)
 VALIDBENCHSETNAMES := bench-pthread bench-math bench-string string-benchset \
    wcsmbs-benchset stdlib-benchset stdio-common-benchset math-benchset \
-   malloc-thread
+   malloc-thread mutex-adaptive-thread
 INVALIDBENCHSETNAMES := $(filter-out ${VALIDBENCHSETNAMES},${BENCHSET})
 ifneq (${INVALIDBENCHSETNAMES},)
 $(info The following values in BENCHSET are invalid: ${INVALIDBENCHSETNAMES})
@@ -176,7 +185,7 @@ endif
 
 # Define the bench target only if the target has a usable python installation.
 ifdef PYTHON
-bench: bench-build bench-set bench-func bench-malloc
+bench: bench-build bench-set bench-func bench-malloc bench-mutex
 else
 bench:
 	@echo "The bench target needs python to run."
@@ -187,10 +196,10 @@ endif
 # only if we're building natively.
 ifeq (no,$(cross-compiling))
 bench-build: $(gen-locales) $(timing-type) $(binaries-bench) \
-	$(binaries-benchset) $(binaries-bench-malloc)
+	$(binaries-benchset) $(binaries-bench-malloc) $(binaries-bench-mutex)
 else
 bench-build: $(timing-type) $(binaries-bench) $(binaries-benchset) \
-	$(binaries-bench-malloc)
+	$(binaries-bench-malloc) $(binaries-bench-mutex)
 endif
 
 bench-set: $(binaries-benchset)
@@ -203,6 +212,19 @@ bench-malloc: $(binaries-bench-malloc)
 	for run in $^; do \
 		for thr in 1 8 16 32; do \
 			echo "Running $${run} $${thr}"; \
+	  $(run-bench) $${thr} > $${run}-$${thr}.out; \
+	  done;\
+	done
+
+# Run benchmark with 1, 2, 3, nproc/2, nproc threads
+bench-mutex: $(binaries-bench-mutex)
+	for run in $^; do \
+		prev=0; \
+		for thr in 1 2 3 4 $$((`nproc` / 4)) $$((`nproc` / 2)) `nproc`; do \
+			if [ $$thr -gt $$prev -a $$thr -lt `nproc` ]; then \
+			echo "Running $${run} $${thr}"; \
+			fi; \
+			prev=$$thr; \
 	  $(run-bench) $${thr} > $${run}-$${thr}.out; \
 	  done;\
 	done
@@ -236,8 +258,8 @@ bench-func: $(binaries-bench)
 	fi
 
 $(timing-type) $(binaries-bench) $(binaries-benchset) \
-	$(binaries-bench-malloc): %: %.o $(objpfx)json-lib.o \
-	$(link-extra-libs-tests) \
+	$(binaries-bench-malloc) $(binaries-bench-mutex): \
+	%: %.o $(objpfx)json-lib.o $(link-extra-libs-tests) \
   $(sort $(filter $(common-objpfx)lib%,$(link-libc))) \
   $(addprefix $(csu-objpfx),start.o) $(+preinit) $(+postinit)
 	$(+link-tests)
