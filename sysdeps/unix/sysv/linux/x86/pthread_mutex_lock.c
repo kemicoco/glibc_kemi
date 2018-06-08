@@ -19,4 +19,5 @@
 #include <elision-conf.h>
 #include "force-elision.h"
 
+#include "nptl/pthread_mutex_conf.h"
 #include "nptl/pthread_mutex_lock.c"

@@ -28,4 +28,6 @@ struct mutex_config
 
 extern struct mutex_config __mutex_aconf attribute_hidden;
 
+#define READ_ONLY_SPIN 1
+
 #endif

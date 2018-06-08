@@ -124,8 +124,14 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
       if (LLL_MUTEX_TRYLOCK (mutex) != 0)
 	{
 	  int cnt = 0;
+#ifdef READ_ONLY_SPIN
+	  int val = 0;
+	  int max_cnt = MIN (__mutex_aconf.spin_count,
+			            mutex->__data.__spins * 2 + 10);
+#else
 	  int max_cnt = MIN (MAX_ADAPTIVE_COUNT,
 			     mutex->__data.__spins * 2 + 10);
+#endif
 	  do
 	    {
 	      if (cnt++ >= max_cnt)
@@ -133,7 +139,16 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
 		  LLL_MUTEX_LOCK (mutex);
 		  break;
 		}
+#ifdef READ_ONLY_SPIN
+	      do
+	        {
+		      atomic_spin_nop ();
+		      val = atomic_load_relaxed (&mutex->__data.__lock);
+	        }
+	      while (val != 0 && ++cnt < max_cnt);
+#else
 	      atomic_spin_nop ();
+#endif
 	    }
 	  while (LLL_MUTEX_TRYLOCK (mutex) != 0);
 
