@@ -110,6 +110,8 @@ __pthread_mutex_init (pthread_mutex_t *mutex,
 	  && __set_robust_list_avail < 0)
 	return ENOTSUP;
 #endif
+      if ((imutexattr->mutexkind & PTHREAD_MUTEX_QUEUESPINNER_NP) != 0)
+        return ENOTSUP;
 
       mutex->__data.__kind |= PTHREAD_MUTEX_ROBUST_NORMAL_NP;
     }
@@ -146,7 +148,6 @@ __pthread_mutex_init (pthread_mutex_t *mutex,
   if ((imutexattr->mutexkind & (PTHREAD_MUTEXATTR_FLAG_PSHARED
 				| PTHREAD_MUTEXATTR_FLAG_ROBUST)) != 0)
     mutex->__data.__kind |= PTHREAD_MUTEX_PSHARED_BIT;
-
   /* Default values: mutex not used yet.  */
   // mutex->__count = 0;	already done by memset
   // mutex->__owner = 0;	already done by memset

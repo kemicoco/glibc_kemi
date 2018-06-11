@@ -62,7 +62,7 @@
 /* Internal mutex type value.  */
 enum
 {
-  PTHREAD_MUTEX_KIND_MASK_NP = 3,
+  PTHREAD_MUTEX_KIND_MASK_NP = 7,
 
   PTHREAD_MUTEX_ELISION_NP    = 256,
   PTHREAD_MUTEX_NO_ELISION_NP = 512,

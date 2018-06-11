@@ -749,7 +749,7 @@ allocate_stack (const struct pthread_attr *attr, struct pthread **pdp,
      might have happened in the kernel.  */
   pd->robust_head.futex_offset = (offsetof (pthread_mutex_t, __data.__lock)
 				  - offsetof (pthread_mutex_t,
-					      __data.__list.__next));
+					      __data.__list.__list_t.__next));
   pd->robust_head.list_op_pending = NULL;
 #if __PTHREAD_MUTEX_HAVE_PREV
   pd->robust_prev = &pd->robust_head;
