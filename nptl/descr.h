@@ -184,38 +184,38 @@ struct pthread
      FIXME We should use relaxed MO atomic operations here and signal fences
      because this kind of concurrency is similar to synchronizing with a
      signal handler.  */
-# define QUEUE_PTR_ADJUST (offsetof (__pthread_list_t, __next))
+# define QUEUE_PTR_ADJUST (offsetof (__pthread_list_t, __list_t.__next))
 
 # define ENQUEUE_MUTEX_BOTH(mutex, val)					      \
   do {									      \
     __pthread_list_t *next = (__pthread_list_t *)			      \
       ((((uintptr_t) THREAD_GETMEM (THREAD_SELF, robust_head.list)) & ~1ul)   \
        - QUEUE_PTR_ADJUST);						      \
-    next->__prev = (void *) &mutex->__data.__list.__next;		      \
-    mutex->__data.__list.__next = THREAD_GETMEM (THREAD_SELF,		      \
+    next->__list_t.__prev = (void *) &mutex->__data.__list.__list_t.__next;		      \
+    mutex->__data.__list.__list_t.__next = THREAD_GETMEM (THREAD_SELF,		      \
 						 robust_head.list);	      \
-    mutex->__data.__list.__prev = (void *) &THREAD_SELF->robust_head;	      \
+    mutex->__data.__list.__list_t.__prev = (void *) &THREAD_SELF->robust_head;	      \
     /* Ensure that the new list entry is ready before we insert it.  */	      \
     __asm ("" ::: "memory");						      \
     THREAD_SETMEM (THREAD_SELF, robust_head.list,			      \
-		   (void *) (((uintptr_t) &mutex->__data.__list.__next)	      \
+		   (void *) (((uintptr_t) &mutex->__data.__list.__list_t.__next)	      \
 			     | val));					      \
   } while (0)
 # define DEQUEUE_MUTEX(mutex) \
   do {									      \
     __pthread_list_t *next = (__pthread_list_t *)			      \
-      ((char *) (((uintptr_t) mutex->__data.__list.__next) & ~1ul)	      \
+      ((char *) (((uintptr_t) mutex->__data.__list.__list_t.__next) & ~1ul)	      \
        - QUEUE_PTR_ADJUST);						      \
-    next->__prev = mutex->__data.__list.__prev;				      \
+    next->__list_t.__prev = mutex->__data.__list.__list_t.__prev;				      \
     __pthread_list_t *prev = (__pthread_list_t *)			      \
-      ((char *) (((uintptr_t) mutex->__data.__list.__prev) & ~1ul)	      \
+      ((char *) (((uintptr_t) mutex->__data.__list.__list_t.__prev) & ~1ul)	      \
        - QUEUE_PTR_ADJUST);						      \
-    prev->__next = mutex->__data.__list.__next;				      \
+    prev->__list_t.__next = mutex->__data.__list.__list_t.__next;			\
     /* Ensure that we remove the entry from the list before we change the     \
        __next pointer of the entry, which is read by the kernel.  */	      \
     __asm ("" ::: "memory");						      \
-    mutex->__data.__list.__prev = NULL;					      \
-    mutex->__data.__list.__next = NULL;					      \
+    mutex->__data.__list.__list_t.__prev = NULL;					      \
+    mutex->__data.__list.__list_t.__next = NULL;					      \
   } while (0)
 #else
   union
@@ -226,7 +226,7 @@ struct pthread
 
 # define ENQUEUE_MUTEX_BOTH(mutex, val)					      \
   do {									      \
-    mutex->__data.__list.__next						      \
+    mutex->__data.__list.__list_t.__next						      \
       = THREAD_GETMEM (THREAD_SELF, robust_list.__next);		      \
     /* Ensure that the new list entry is ready before we insert it.  */	      \
     __asm ("" ::: "memory");						      \
@@ -253,7 +253,7 @@ struct pthread
 	/* Ensure that we remove the entry from the list before we change the \
 	   __next pointer of the entry, which is read by the kernel.  */      \
 	    __asm ("" ::: "memory");					      \
-	mutex->__data.__list.__next = NULL;				      \
+	mutex->__data.__list.__list_t.__next = NULL;				      \
       }									      \
   } while (0)
 #endif

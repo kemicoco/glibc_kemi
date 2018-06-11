@@ -111,6 +111,11 @@ __pthread_mutex_init (pthread_mutex_t *mutex,
 	return ENOTSUP;
 #endif
 
+      /* Robust mutex does not support the PTHREAD_MUTEX_QUEUESPINNER_NP
+         GNU extension.  */
+      if ((imutexattr->mutexkind & PTHREAD_MUTEX_QUEUESPINNER_NP) != 0)
+        return ENOTSUP;
+
       mutex_kind |= PTHREAD_MUTEX_ROBUST_NORMAL_NP;
     }
 

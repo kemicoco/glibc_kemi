@@ -25,6 +25,7 @@
 #include <atomic.h>
 #include <lowlevellock.h>
 #include <not-cancel.h>
+#include <mcs_lock.h>
 
 #include <stap-probe.h>
 
@@ -135,13 +136,37 @@ __pthread_mutex_timedlock (pthread_mutex_t *mutex,
 	  mutex->__data.__spins += (cnt - mutex->__data.__spins) / 8;
 	}
       break;
+    case PTHREAD_MUTEX_QUEUESPINNER_NP:
+      if (! __is_smp)
+        goto simple;
 
+      if (lll_trylock (mutex) != 0)
+        {
+          int cnt = 0;
+          int max_cnt = MIN (max_adaptive_count (),
+                            mutex->__data.__spins * 2 + 10);
+          int val = 0;
+
+          mcs_lock ((mcs_lock_t **)&mutex->__data.__list.mcs_lock);
+          do
+            {
+              atomic_spin_nop ();
+              val = atomic_load_relaxed (&mutex->__data.__lock);
+            }
+          while (val != 0 && ++cnt < max_cnt);
+          mcs_unlock ((mcs_lock_t **)&mutex->__data.__list.mcs_lock);
+          result = lll_timedlock(mutex->__data.__lock, abstime,
+                      PTHREAD_MUTEX_PSHARED (mutex));
+
+          mutex->__data.__spins += (cnt - mutex->__data.__spins) / 8;
+        }
+      break;
     case PTHREAD_MUTEX_ROBUST_RECURSIVE_NP:
     case PTHREAD_MUTEX_ROBUST_ERRORCHECK_NP:
     case PTHREAD_MUTEX_ROBUST_NORMAL_NP:
     case PTHREAD_MUTEX_ROBUST_ADAPTIVE_NP:
       THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-		     &mutex->__data.__list.__next);
+		     &mutex->__data.__list.__list_t.__next);
       /* We need to set op_pending before starting the operation.  Also
 	 see comments at ENQUEUE_MUTEX.  */
       __asm ("" ::: "memory");
@@ -335,6 +360,7 @@ __pthread_mutex_timedlock (pthread_mutex_t *mutex,
     case PTHREAD_MUTEX_PI_ERRORCHECK_NP:
     case PTHREAD_MUTEX_PI_NORMAL_NP:
     case PTHREAD_MUTEX_PI_ADAPTIVE_NP:
+    case PTHREAD_MUTEX_PI_QUEUESPINNER_NP:
     case PTHREAD_MUTEX_PI_ROBUST_RECURSIVE_NP:
     case PTHREAD_MUTEX_PI_ROBUST_ERRORCHECK_NP:
     case PTHREAD_MUTEX_PI_ROBUST_NORMAL_NP:
@@ -353,7 +379,7 @@ __pthread_mutex_timedlock (pthread_mutex_t *mutex,
 	  {
 	    /* Note: robust PI futexes are signaled by setting bit 0.  */
 	    THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-			   (void *) (((uintptr_t) &mutex->__data.__list.__next)
+			   (void *) (((uintptr_t) &mutex->__data.__list.__list_t.__next)
 				     | 1));
 	    /* We need to set op_pending before starting the operation.  Also
 	       see comments at ENQUEUE_MUTEX.  */
@@ -516,6 +542,7 @@ __pthread_mutex_timedlock (pthread_mutex_t *mutex,
     case PTHREAD_MUTEX_PP_ERRORCHECK_NP:
     case PTHREAD_MUTEX_PP_NORMAL_NP:
     case PTHREAD_MUTEX_PP_ADAPTIVE_NP:
+    case PTHREAD_MUTEX_PP_QUEUESPINNER_NP:
       {
 	/* See concurrency notes regarding __kind in struct __pthread_mutex_s
 	   in sysdeps/nptl/bits/thread-shared-types.h.  */

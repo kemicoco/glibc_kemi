@@ -79,15 +79,19 @@
 /* Common definition of pthread_mutex_t. */
 
 #if !__PTHREAD_MUTEX_USE_UNION
-typedef struct __pthread_internal_list
+typedef union __pthread_internal_list
 {
-  struct __pthread_internal_list *__prev;
-  struct __pthread_internal_list *__next;
+  struct {
+    union __pthread_internal_list *__prev;
+    union __pthread_internal_list *__next;
+  }__list_t;
+  void *mcs_lock;
 } __pthread_list_t;
 #else
-typedef struct __pthread_internal_slist
+typedef union __pthread_internal_slist
 {
-  struct __pthread_internal_slist *__next;
+  union __pthread_internal_slist *__next;
+  void *mcs_lock;
 } __pthread_slist_t;
 #endif
 
@@ -165,6 +169,13 @@ struct __pthread_mutex_s
   __PTHREAD_COMPAT_PADDING_END
 };
 
+struct mcs_lock
+{
+  struct mcs_lock *next;
+  int locked;
+};
+
+typedef struct mcs_lock mcs_lock_t;
 
 /* Common definition of pthread_cond_t. */
 

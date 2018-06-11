@@ -25,7 +25,7 @@ __pthread_mutexattr_settype (pthread_mutexattr_t *attr, int kind)
 {
   struct pthread_mutexattr *iattr;
 
-  if (kind < PTHREAD_MUTEX_NORMAL || kind > PTHREAD_MUTEX_ADAPTIVE_NP)
+  if (kind < PTHREAD_MUTEX_NORMAL || kind > PTHREAD_MUTEX_QUEUESPINNER_NP)
     return EINVAL;
 
   /* Cannot distinguish between DEFAULT and NORMAL. So any settype

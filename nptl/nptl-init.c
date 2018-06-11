@@ -289,7 +289,7 @@ __pthread_initialize_minimal_internal (void)
 #ifdef __NR_set_robust_list
     pd->robust_head.futex_offset = (offsetof (pthread_mutex_t, __data.__lock)
 				    - offsetof (pthread_mutex_t,
-						__data.__list.__next));
+						__data.__list.__list_t.__next));
     INTERNAL_SYSCALL_DECL (err);
     int res = INTERNAL_SYSCALL (set_robust_list, err, 2, &pd->robust_head,
 				sizeof (struct robust_list_head));
