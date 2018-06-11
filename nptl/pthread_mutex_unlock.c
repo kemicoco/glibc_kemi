@@ -76,6 +76,9 @@ __pthread_mutex_unlock_usercnt (pthread_mutex_t *mutex, int decr)
       goto normal;
     }
   else if (__builtin_expect (PTHREAD_MUTEX_TYPE (mutex)
+			      == PTHREAD_MUTEX_QUEUESPINNER_NP, 1))
+    goto normal;
+  else if (__builtin_expect (PTHREAD_MUTEX_TYPE (mutex)
 			      == PTHREAD_MUTEX_ADAPTIVE_NP, 1))
     goto normal;
   else
@@ -140,7 +143,7 @@ __pthread_mutex_unlock_full (pthread_mutex_t *mutex, int decr)
     robust:
       /* Remove mutex from the list.  */
       THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-		     &mutex->__data.__list.__next);
+		     &mutex->__data.__list.__list_t.__next);
       /* We must set op_pending before we dequeue the mutex.  Also see
 	 comments at ENQUEUE_MUTEX.  */
       __asm ("" ::: "memory");
@@ -234,7 +237,7 @@ __pthread_mutex_unlock_full (pthread_mutex_t *mutex, int decr)
 	  /* Remove mutex from the list.
 	     Note: robust PI futexes are signaled by setting bit 0.  */
 	  THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-			 (void *) (((uintptr_t) &mutex->__data.__list.__next)
+			 (void *) (((uintptr_t) &mutex->__data.__list.__list_t.__next)
 				   | 1));
 	  /* We must set op_pending before we dequeue the mutex.  Also see
 	     comments at ENQUEUE_MUTEX.  */

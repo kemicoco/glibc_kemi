@@ -26,6 +26,7 @@
 #include <atomic.h>
 #include <lowlevellock.h>
 #include <stap-probe.h>
+#include "mcs_lock.h"
 
 #ifndef lll_lock_elision
 #define lll_lock_elision(lock, try_lock, private)	({ \
@@ -116,6 +117,36 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
       mutex->__data.__count = 1;
     }
   else if (__builtin_expect (PTHREAD_MUTEX_TYPE (mutex)
+			 == PTHREAD_MUTEX_QUEUESPINNER_NP, 1))
+    {
+      if (! __is_smp)
+        goto simple;
+
+      if (LLL_MUTEX_TRYLOCK (mutex) != 0)
+        {
+          int cnt = 0;
+          int max_cnt = MIN (MAX_ADAPTIVE_COUNT,
+                            mutex->__data.__spins * 2 + 10);
+          int val = 0;
+          mcs_lock_t node;
+
+          mcs_lock ((mcs_lock_t **)&mutex->__data.__list.mcs_lock, &node);
+
+          do
+            {
+              atomic_spin_nop ();
+              val = atomic_load_relaxed (&mutex->__data.__lock);
+            }
+          while (val != 0 && ++cnt < max_cnt);
+
+          mcs_unlock ((mcs_lock_t **)&mutex->__data.__list.mcs_lock, &node);
+          LLL_MUTEX_LOCK (mutex);
+
+          mutex->__data.__spins += (cnt - mutex->__data.__spins) / 8;
+        }
+      assert (mutex->__data.__owner == 0);
+    }
+  else if (__builtin_expect (PTHREAD_MUTEX_TYPE (mutex)
 			  == PTHREAD_MUTEX_ADAPTIVE_NP, 1))
     {
       if (! __is_smp)
@@ -192,7 +223,7 @@ __pthread_mutex_lock_full (pthread_mutex_t *mutex)
     case PTHREAD_MUTEX_ROBUST_NORMAL_NP:
     case PTHREAD_MUTEX_ROBUST_ADAPTIVE_NP:
       THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-		     &mutex->__data.__list.__next);
+		     &mutex->__data.__list.__list_t.__next);
       /* We need to set op_pending before starting the operation.  Also
 	 see comments at ENQUEUE_MUTEX.  */
       __asm ("" ::: "memory");
@@ -372,7 +403,7 @@ __pthread_mutex_lock_full (pthread_mutex_t *mutex)
 	  {
 	    /* Note: robust PI futexes are signaled by setting bit 0.  */
 	    THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-			   (void *) (((uintptr_t) &mutex->__data.__list.__next)
+			   (void *) (((uintptr_t) &mutex->__data.__list.__list_t.__next)
 				     | 1));
 	    /* We need to set op_pending before starting the operation.  Also
 	       see comments at ENQUEUE_MUTEX.  */

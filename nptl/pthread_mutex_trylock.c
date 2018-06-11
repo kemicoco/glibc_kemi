@@ -76,6 +76,7 @@ __pthread_mutex_trylock (pthread_mutex_t *mutex)
       FORCE_ELISION (mutex, goto elision);
       /*FALL THROUGH*/
     case PTHREAD_MUTEX_ADAPTIVE_NP:
+    case PTHREAD_MUTEX_QUEUESPINNER_NP:
     case PTHREAD_MUTEX_ERRORCHECK_NP:
       if (lll_trylock (mutex->__data.__lock) != 0)
 	break;
@@ -91,7 +92,7 @@ __pthread_mutex_trylock (pthread_mutex_t *mutex)
     case PTHREAD_MUTEX_ROBUST_NORMAL_NP:
     case PTHREAD_MUTEX_ROBUST_ADAPTIVE_NP:
       THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-		     &mutex->__data.__list.__next);
+		     &mutex->__data.__list.__list_t.__next);
 
       oldval = mutex->__data.__lock;
       do
@@ -205,7 +206,7 @@ __pthread_mutex_trylock (pthread_mutex_t *mutex)
 	if (robust)
 	  /* Note: robust PI futexes are signaled by setting bit 0.  */
 	  THREAD_SETMEM (THREAD_SELF, robust_head.list_op_pending,
-			 (void *) (((uintptr_t) &mutex->__data.__list.__next)
+			 (void *) (((uintptr_t) &mutex->__data.__list.__list_t.__next)
 				   | 1));
 
 	oldval = mutex->__data.__lock;

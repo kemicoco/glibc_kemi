@@ -16,29 +16,6 @@
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
-#include <errno.h>
-#include <pthreadP.h>
+void mcs_lock (mcs_lock_t **lock, mcs_lock_t *node);
 
-
-int
-__pthread_mutexattr_settype (pthread_mutexattr_t *attr, int kind)
-{
-  struct pthread_mutexattr *iattr;
-
-  if (kind < PTHREAD_MUTEX_NORMAL || kind > PTHREAD_MUTEX_QUEUESPINNER_NP)
-    return EINVAL;
-
-  /* Cannot distinguish between DEFAULT and NORMAL. So any settype
-     call disables elision for now.  */
-  if (kind == PTHREAD_MUTEX_NORMAL)
-    kind |= PTHREAD_MUTEX_NO_ELISION_NP;
-
-  iattr = (struct pthread_mutexattr *) attr;
-
-  iattr->mutexkind = (iattr->mutexkind & PTHREAD_MUTEXATTR_FLAG_BITS) | kind;
-
-  return 0;
-}
-weak_alias (__pthread_mutexattr_settype, pthread_mutexattr_setkind_np)
-weak_alias (__pthread_mutexattr_settype, pthread_mutexattr_settype)
-hidden_def (__pthread_mutexattr_settype)
+void mcs_unlock (mcs_lock_t **lock, mcs_lock_t *node);
