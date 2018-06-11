@@ -242,10 +242,10 @@ LDLIBS-tst-minstack-throw = -lstdc++
 
 tests = tst-attr1 tst-attr2 tst-attr3 tst-default-attr \
 	tst-mutex1 tst-mutex2 tst-mutex3 tst-mutex4 tst-mutex5 tst-mutex6 \
-	tst-mutex7 tst-mutex9 tst-mutex10 tst-mutex5a tst-mutex7a \
-	tst-mutex7robust tst-mutexpi1 tst-mutexpi2 tst-mutexpi3 tst-mutexpi4 \
-	tst-mutexpi5 tst-mutexpi5a tst-mutexpi6 tst-mutexpi7 tst-mutexpi7a \
-	tst-mutexpi9 \
+	tst-mutex7 tst-mutex9 tst-mutex10 tst-mutex5a tst-mutex5b tst-mutex7a \
+	tst-mutex7b tst-mutex7robust tst-mutexpi1 tst-mutexpi2 tst-mutexpi3 \
+	tst-mutexpi4 tst-mutexpi5 tst-mutexpi5a tst-mutexpi5b  tst-mutexpi6 \
+	tst-mutexpi7 tst-mutexpi7a tst-mutexpi7b tst-mutexpi9 \
 	tst-spin1 tst-spin2 tst-spin3 tst-spin4 \
 	tst-cond1 tst-cond2 tst-cond3 tst-cond4 tst-cond5 tst-cond6 tst-cond7 \
 	tst-cond8 tst-cond9 tst-cond10 tst-cond11 tst-cond12 tst-cond13 \
