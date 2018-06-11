@@ -24,6 +24,7 @@
 pthread_mutex_t mtx_normal = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mtx_recursive = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 pthread_mutex_t mtx_errorchk = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+pthread_mutex_t mtx_queuespinner = PTHREAD_QUEUESPINNER_MUTEX_INITIALIZER_NP;
 pthread_mutex_t mtx_adaptive = PTHREAD_ADAPTIVE_MUTEX_INITIALIZER_NP;
 pthread_rwlock_t rwl_normal = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t rwl_writer
@@ -39,20 +40,22 @@ do_test (void)
     return 2;
   if (mtx_errorchk.__data.__kind != PTHREAD_MUTEX_ERRORCHECK_NP)
     return 3;
-  if (mtx_adaptive.__data.__kind != PTHREAD_MUTEX_ADAPTIVE_NP)
+  if (mtx_queuespinner.__data.__kind != PTHREAD_MUTEX_QUEUESPINNER_NP)
     return 4;
-  if (rwl_normal.__data.__flags != PTHREAD_RWLOCK_PREFER_READER_NP)
+  if (mtx_adaptive.__data.__kind != PTHREAD_MUTEX_ADAPTIVE_NP)
     return 5;
+  if (rwl_normal.__data.__flags != PTHREAD_RWLOCK_PREFER_READER_NP)
+    return 6;
   if (rwl_writer.__data.__flags
       != PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP)
-    return 6;
+    return 7;
   /* <libc-lock.h> __libc_rwlock_init definition for libc.so
      relies on PTHREAD_RWLOCK_INITIALIZER being all zeros.  If
      that ever changes, <libc-lock.h> needs updating.  */
   size_t i;
   for (i = 0; i < sizeof (rwl_normal); i++)
     if (((char *) &rwl_normal)[i] != '\0')
-      return 7;
+      return 8;
   return 0;
 }
 
