@@ -216,13 +216,15 @@ bench-malloc: $(binaries-bench-malloc)
 	  done;\
 	done
 
-# Run benchmark with 1, 2, 3, nproc/2, nproc threads
+# Run benchmark with 1, 2, 3, 4, nproc/4, nproc/2, nproc threads
 bench-mutex: $(binaries-bench-mutex)
 	for run in $^; do \
 		prev=0; \
 		for thr in 1 2 3 4 $$((`nproc` / 4)) $$((`nproc` / 2)) `nproc`; do \
-			if [ $$thr -gt $$prev -a $$thr -lt `nproc` ]; then \
+			if [ $$thr -gt $$prev -a $$thr -le `nproc` ]; then \
 			echo "Running $${run} $${thr}"; \
+			else \
+			continue; \
 			fi; \
 			prev=$$thr; \
 	  $(run-bench) $${thr} > $${run}-$${thr}.out; \
