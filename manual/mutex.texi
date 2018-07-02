@@ -1,0 +1,68 @@
+@node Pthread mutex
+@c %MENU% mutex
+
+This chapter describes the usage and implmentation of POSIX Pthreads Mutex.
+
+@menu
+* Mutex introduction:: What is mutex?
+* Mutex type:: The capability for each type of mutex
+* Mutex usage:: How to use mutex?
+* Usage scenarios and limitation::
+@end menu
+
+@node Mutex introduction
+@section Mutex introduction
+
+Mutex is used to protect the data structure shared among threads/processes.
+
+@node Mutex type
+@section Mutex type
+
+@deftp Type PTHREAD_MUTEX_QUEUESPINNER_NP
+Queue spinner mutex can reduce the overhead of lock holder transition and
+make mutex scalable in a large system with more and more CPUs (E.g. NUMA
+architecture) by queuing spinners. It puts mutex spinners into a queue
+before spinning on the mutex lock and only allows one spinner spinning on
+mutex lock. Thus, when lock is released, the current spinner can acquire
+the lock immediately because the cache line including mutex lock is only
+contended between previous lock holder and current spinner, and the
+overhead of lock acquisition via spinning is always O(1) no matter how
+severe the lock is contended.
+@end deftp
+
+@node Mutex usage
+@section Mutex usage
+
+@deftp Type PTHREAD_MUTEX_QUEUESPINNER_NP
+Queue spinner mutex can be initialized simply by either using the macro
+definition @code{PTHREAD_QUEUESPINNER_MUTEX_INITIALIZER_NP} or dynamically
+calling @code{pthread_mutex_init}.
+
+Static initialization:
+@smallexample
+mutex = PTHREAD_QUEUESPINNER_MUTEX_INITIALIZER_NP
+@end smallexample
+
+Dynamic initialization:
+@smallexample
+pthread_mutexattr_init(&attr)
+pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_QUEUESPINNER_NP)
+pthread_mutex_init(&mutex, &attr)
+@end smallexample
+@end deftp
+
+@node Usage scenarios and limitation
+@section Usage scenarios and limitation
+
+@deftp TYPE PTHREAD_MUTEX_QUEUESPINNER_NP
+There could be a potential risk to use mutex initialized with type
+@code{PTHREAD_MUTEX_QUEUESPINNER_NP} if CPU resource is oversubscribed. E.g.
+when a lock holder is transferred to the next spinner in the queue. but it
+is not running (the CPU is scheduled to run other task at that moment).
+Thus, the other spinners have to wait and it may lead to lock performance
+collapse. Therefore, queue spinner mutex would be carefully used for
+applications to pursue performance and fairness without oversubsribing CPU
+resource. E.g. Run a application within a container in private or public
+cloud infrastructure or a application running on the CPUs without subscribed
+by other tasks at the same time.
+@end deftp
