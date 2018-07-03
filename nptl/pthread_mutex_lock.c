@@ -57,6 +57,12 @@
 #define FORCE_ELISION(m, s)
 #endif
 
+static __thread mcs_lock_t node = {
+  NULL,
+  0,
+  0
+};
+
 static int __pthread_mutex_lock_full (pthread_mutex_t *mutex)
      __attribute_noinline__;
 
@@ -128,7 +134,6 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
           int max_cnt = MIN (MAX_ADAPTIVE_COUNT,
                             mutex->__data.__spins * 2 + 10);
           int val = 0;
-          mcs_lock_t node;
 
           mcs_lock ((mcs_lock_t **)&mutex->__data.__list.mcs_lock, &node);
 

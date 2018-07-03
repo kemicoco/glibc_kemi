@@ -22,10 +22,19 @@
 void mcs_lock (mcs_lock_t **lock, mcs_lock_t *node)
 {
   mcs_lock_t *prev;
+  int cnt = 0;
 
-  /* Initalize node.  */
+  /* Black node is allowed to spin on mutex immediately */
+  if (node->locked == 2)
+    {
+      node->tag = 1;
+      node->next = NULL;
+      return;
+    }
+  /* Initialize node.  */
   node->next = NULL;
   node->locked = 0;
+  node->tag = 0;
 
   prev = atomic_exchange_acquire(lock, node);
 
@@ -39,13 +48,25 @@ void mcs_lock (mcs_lock_t **lock, mcs_lock_t *node)
   /* Add current spinner into the queue.  */
   atomic_store_release (&prev->next, node);
   atomic_full_barrier ();
-  /* Waiting until waken up by the previous spinner.  */
+  /* Waiting unless waken up by the previous spinner or timeout.  */
   while (!atomic_load_relaxed (&node->locked))
-    atomic_spin_nop ();
+    {
+	  atomic_spin_nop ();
+	  /* If timeout, mark this node black before get the permission.  */
+	  if (++cnt >= MAX_ADAPTIVE_COUNT)
+        {
+          /* Make node->locked = 2 to mark a node black */
+          atomic_compare_and_exchange_val_acq (&node->locked, 2, 0);
+          return;
+        }
+    }
 }
 
 void mcs_unlock (mcs_lock_t **lock, mcs_lock_t *node)
 {
+  if (node->tag == 1)
+	  return;
+
   mcs_lock_t *next = node->next;
 
   if (next == NULL)
@@ -61,7 +82,6 @@ void mcs_unlock (mcs_lock_t **lock, mcs_lock_t *node)
       while (! (next = atomic_load_relaxed (&node->next)))
         atomic_spin_nop ();
     }
-
   /* Wake up the next spinner.  */
   atomic_store_release (&next->locked, 1);
   atomic_full_barrier ();

@@ -153,6 +153,7 @@ struct mcs_lock
 {
   struct mcs_lock *next;
   int locked;
+  int tag;
 };
 
 typedef struct mcs_lock mcs_lock_t;
