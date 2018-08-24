@@ -124,6 +124,7 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
       if (LLL_MUTEX_TRYLOCK (mutex) != 0)
 	{
 	  int cnt = 0;
+	  mutex->__data.__spins = 0;
 	  int max_cnt = MIN (MAX_ADAPTIVE_COUNT,
 			     mutex->__data.__spins * 2 + 10);
 	  do
@@ -137,7 +138,7 @@ __pthread_mutex_lock (pthread_mutex_t *mutex)
 	    }
 	  while (LLL_MUTEX_TRYLOCK (mutex) != 0);
 
-//	  mutex->__data.__spins += (cnt - mutex->__data.__spins) / 8;
+	  mutex->__data.__spins += (cnt - mutex->__data.__spins) / 8;
 	}
       assert (mutex->__data.__owner == 0);
     }
