@@ -17,6 +17,7 @@
    <http://www.gnu.org/licenses/>.  */
 
 #include <atomic.h>
+#include "mcs_lock.h"
 #include "pthreadP.h"
 
 int
@@ -39,16 +40,16 @@ pthread_spin_lock (pthread_spinlock_t *lock)
   /* Try to acquire the lock with an exchange instruction as this architecture
      has such an instruction and we assume it is faster than a CAS.
      The acquisition succeeds if the lock is not in an acquired state.  */
-  if (__glibc_likely (atomic_exchange_acquire (lock, 1) == 0))
+  if (__glibc_likely (atomic_exchange_acquire (lock->__lock, 1) == 0))
     return 0;
 #else
   /* Try to acquire the lock with a CAS instruction as this architecture
      has no exchange instruction.  The acquisition succeeds if the lock is not
      acquired.  */
-  if (__glibc_likely (atomic_compare_exchange_weak_acquire (lock, &val, 1)))
+  if (__glibc_likely (atomic_compare_exchange_weak_acquire (lock->__lock, &val, 1)))
     return 0;
 #endif
-
+  mcs_lock (&lock->tail, &node);
   do
     {
       /* The lock is contended and we need to wait.  Going straight back
@@ -75,6 +76,6 @@ pthread_spin_lock (pthread_spinlock_t *lock)
 	 for the first try to lock the spinlock.  */
     }
   while (!atomic_compare_exchange_weak_acquire (lock, &val, 1));
-
+  mcs_unlock (&lock->tail, &node);
   return 0;
 }
