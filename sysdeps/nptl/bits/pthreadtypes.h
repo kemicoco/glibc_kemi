@@ -100,7 +100,14 @@ typedef union
 
 #ifdef __USE_XOPEN2K
 /* POSIX spinlock data type.  */
-typedef volatile int pthread_spinlock_t;
+
+
+typedef struct
+{
+	volatile int spin_lock;
+	void *mcs_lock;
+	int token;
+} pthread_spinlock_t;
 
 
 /* POSIX barriers data type.  The structure of the type is
