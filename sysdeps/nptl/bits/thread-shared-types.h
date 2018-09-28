@@ -145,6 +145,13 @@ struct __pthread_mutex_s
   __PTHREAD_COMPAT_PADDING_END
 };
 
+struct mcs_lock
+{
+	struct mcs_lock *prev, *next;
+	int locked;
+};
+
+typedef struct mcs_lock mcs_lock_t;
 
 /* Common definition of pthread_cond_t. */
 
