@@ -104,7 +104,7 @@ typedef union
 
 typedef struct
 {
-	volatile int *spin_lock;
+	volatile int spin_lock;
 	void *mcs_lock;
 } pthread_spinlock_t;
 
