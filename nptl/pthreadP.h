@@ -49,7 +49,7 @@
 
 /* Adaptive mutex definitions.  */
 #ifndef MAX_ADAPTIVE_COUNT
-# define MAX_ADAPTIVE_COUNT 100
+# define MAX_ADAPTIVE_COUNT 10000
 #endif
 
 
