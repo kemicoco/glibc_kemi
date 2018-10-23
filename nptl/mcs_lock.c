@@ -23,7 +23,7 @@ void mcs_lock (mcs_lock_t **lock, mcs_lock_t *node, int *token)
 {
   mcs_lock_t *prev;
   /* Initialize node.  */
-begin:
+
   node->next = NULL;
   node->locked = 0;
   node->tag = 0;
@@ -34,14 +34,15 @@ begin:
   if (prev == NULL)
     {
       node->locked = 1;
-      *token = 1;  // need check token in case someone has acquired the
-	  //token
+      // need check token in case someone has acquired the token
+	  while (atomic_compare_and_exchange_val_acq (token, 1, 0) != 0)
+	    atomic_spin_nop ();
       return;
     }
 
   /* Add current spinner into the queue.  */
   atomic_store_release (&prev->next, node);
-  atomic_write_barrier ();
+  atomic_full_barrier ();
   /* Waiting unless waken up by the previous spinner or timeout.  */
   while (!atomic_load_relaxed (&node->locked))
 	  atomic_spin_nop ();
@@ -49,18 +50,28 @@ begin:
   if (atomic_compare_and_exchange_val_acq(token, 1, 0) == 0)
      return;
   else
-    goto begin;
+    goto loop;
+
+loop:
+  node->tag = 1;
+  while(atomic_compare_and_exchange_val_acq (token, 1, 0) != 0)
+  	atomic_spin_nop ();
+
+  return;
 }
 
 void mcs_unlock (mcs_lock_t **lock, mcs_lock_t *node, int *token)
 {
 
   atomic_store_release(token, 0);
+  if (node->tag == 1)
+  	return;
 //   (*lock)->tag = 1
- 
+  mcs_lock_t *next; 
 do
   {
-  mcs_lock_t *next = node->next;
+  next = node->next;
+  //mcs_lock_t *next = node->next;
 
   if (next == NULL)
     {
@@ -76,15 +87,16 @@ do
         atomic_spin_nop ();
     }
 
-  if (next->locked == 1)
-    return;
+//  if (next->locked == 1)
+//    return;
   /* Wake up the next spinner.  */
   atomic_store_release (&next->locked, 1);
-  atomic_write_barrier ();
+  atomic_full_barrier ();
   node = next;
+  atomic_full_barrier ();
   // may need to remove
   atomic_spin_nop ();
   }
-//  while (*token == 0);
+ // while (0);
   while(atomic_load_relaxed (token) == 0);
 }
