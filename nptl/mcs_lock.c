@@ -66,10 +66,10 @@ void mcs_unlock (mcs_lock_t **lock, mcs_lock_t *node, int *token)
   atomic_store_release(token, 0);
   if (node->tag == 1)
   	return;
-//   (*lock)->tag = 1
   mcs_lock_t *next; 
-do
-  {
+//do
+//  {
+loop:
   next = node->next;
   //mcs_lock_t *next = node->next;
 
@@ -92,11 +92,14 @@ do
   /* Wake up the next spinner.  */
   atomic_store_release (&next->locked, 1);
   atomic_full_barrier ();
-  node = next;
-  atomic_full_barrier ();
-  // may need to remove
   atomic_spin_nop ();
-  }
- // while (0);
-  while(atomic_load_relaxed (token) == 0);
+//  }
+//  while (0);
+//  while(atomic_load_relaxed (token) == 0);
+ if (atomic_load_relaxed (token) == 0)
+ {
+   next->tag = 1;
+   node = next;
+   goto loop;
+ }
 }
