@@ -71,6 +71,7 @@ pthread_spin_lock (pthread_spinlock_t *lock)
 	}
       while (val != 0);
 
+    atomic_spin_nop ();
       /* We need acquire memory order here for the same reason as mentioned
 	 for the first try to lock the spinlock.  */
     }
