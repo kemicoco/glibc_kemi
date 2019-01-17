@@ -1,0 +1,26 @@
+[http]
+	proxy = http://child-prc.intel.com:913
+#	proxy = http://proxy-shz.intel.com:1080
+[https]
+#	proxy = http://proxy-shz.intel.com:1080
+	proxy = http://child-prc.intel.com:913
+[url "https://"]
+	insteadof = git://
+[user]
+	name = Kemi Wang
+	email = kemi.wang@intel.com
+[core]
+	editor = vi
+
+
+[sendemail]
+#	smtpencryption = default
+	smtpserver = smtp.intel.com
+#	smtpuser = kemi.wang@intel.com
+	smtpserverport = 25
+#	smtppass = Ww,881231
+[alias]
+	send-lkp-list = send-email --to lkp-developer@eclists.intel.com --cc ying.huang@intel.com --cc philip.li@intel.com
+	send-team-internal = send-email --to ying.huang@intel.com --to aaron.lu@intel.com --to aubrey.li@intel.com --cc kemi.wang@intel.com 
+[push]
+	default = simple
